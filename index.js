@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000
 
@@ -28,12 +28,67 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const productDetails = client.db('productDB').collection('product');
+    const cartDetails = client.db('productDB').collection('cart');
+    const userDetails = client.db('productDB').collection('user');
   
   
    
     app.get('/products', async(req, res ) =>{
         const result = await productDetails.find().toArray();
         res.send(result)
+    })
+   
+    // carts collection
+    app.get('/dashBoard/cart', async(req, res) =>{
+      const email =req.query.email;
+      console.log(email)
+      if(!email){
+        return res.send([])
+      }
+      const query = {email: email}
+      const result= await cartDetails.find(query).toArray();
+      console.log(result)
+      res.send(result)
+    })
+    app.post('/dashBoard/cart', async (req, res)=>{
+      const item = req.body;
+      console.log(item);
+      const result = await cartDetails.insertOne(item);
+      res.send(result)
+    })
+   
+
+    app.delete('/dashBoard/cart/:id', async (req, res) =>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      console.log(id)
+      const result = await cartDetails.deleteOne(query);
+      res.send(result);
+    })
+
+    // userCollection
+    app.get('/dashBoard/user',  async(req, res)=>{
+      const result = await userDetails.find().toArray();
+      res.send(result)
+    })
+   
+    app.post('/dashBoard/user', async(req, res)=>{
+      const user = req.body;
+      const query ={email:user.email};
+      const existingUser = await userDetails.findOne(query)
+      if(existingUser){
+        return res.send({message:"user already exist"})
+      }
+      const result = await userDetails.insertOne(user)
+       res.send(result)
+    })
+    
+    app.delete('/dashBoard/user/:id', async (req, res) =>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      console.log(id)
+      const result = await userDetails.deleteOne(query);
+      res.send(result);
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
